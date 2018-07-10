@@ -6,6 +6,7 @@ using UnityEditor;
 using UnityEngine;
 
 [CreateAssetMenu(menuName = "Scriptable Objects/DirectiveDefiner")]
+[ExecuteInEditMode]
 [InitializeOnLoad]
 public class DirectiveDefiner : ScriptableObject
 {
@@ -46,7 +47,6 @@ public class DirectiveDefiner : ScriptableObject
             return;
         }
         path += "\\mcs.rsp";
-
         if (!File.Exists(path))
         {
             resultLines.AddRange(newLines);
