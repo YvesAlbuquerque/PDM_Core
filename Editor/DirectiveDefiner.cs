@@ -12,7 +12,7 @@ public class DirectiveDefiner : ScriptableObject
 {
     public LookUpCode[] lookUpCode;
 
-    void Awake()
+    void OnEnable()
     {
         string[] currentLines;
         List<string> newLines = new List<string>();
@@ -50,6 +50,7 @@ public class DirectiveDefiner : ScriptableObject
         if (!File.Exists(path))
         {
             resultLines.AddRange(newLines);
+
             if (resultLines.Count > 0)
                 File.WriteAllLines(path, resultLines.ToArray());
         }
