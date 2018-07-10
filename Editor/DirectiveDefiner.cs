@@ -5,8 +5,8 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-[InitializeOnLoad]
 [CreateAssetMenu(menuName = "Scriptable Objects/DirectiveDefiner")]
+[InitializeOnLoad]
 public class DirectiveDefiner : ScriptableObject
 {
     public LookUpCode[] lookUpCode;
@@ -73,7 +73,10 @@ public class DirectiveDefiner : ScriptableObject
             if (resultLines.Count > 0)
                 File.WriteAllLines(path, resultLines.ToArray());
             else
+            {
+                Debug.Log("No Directives defined by PDM. Removing mcp.rsp file.");
                 File.Delete(path);
+            }
         }
     }
 
