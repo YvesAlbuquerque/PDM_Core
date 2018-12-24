@@ -5,7 +5,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Scriptable Objects/DirectiveDefiner")]
+//[CreateAssetMenu(menuName = "Scriptable Objects/DirectiveDefiner")]
 [ExecuteInEditMode]
 [InitializeOnLoad]
 public class DirectiveDefiner : ScriptableObject
