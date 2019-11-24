@@ -46,7 +46,7 @@ public class DirectiveDefiner : ScriptableObject
             Debug.Log("Something goes wrong and optimizer couldn't create the compiler defines needed. RTO should work but with limitations. Please report back to Yves \"Jack\" (AKA: RTO creator) so we can solve this issue");
             return;
         }
-        path += "\\mcs.rsp";
+        path += "\\csc.rsp";
         if (!File.Exists(path))
         {
             resultLines.AddRange(newLines);
@@ -75,7 +75,7 @@ public class DirectiveDefiner : ScriptableObject
                 File.WriteAllLines(path, resultLines.ToArray());
             else
             {
-                Debug.Log("No Directives defined by PDM. Removing mcp.rsp file.");
+                Debug.Log("No Directives defined by PDM. Removing csc.rsp file.");
                 File.Delete(path);
             }
         }
