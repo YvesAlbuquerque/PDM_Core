@@ -22,3 +22,6 @@ MonoBehaviour:
   - domainType: 0
     ifExist: UnityEngine.Analytics
     define: Analytics
+  - domainType: 1
+    ifExist: Unity.RemoteConfig
+    define: RemoteConfig
