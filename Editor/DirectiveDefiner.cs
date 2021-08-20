@@ -12,12 +12,15 @@ public class DirectiveDefiner : ScriptableObject
 {
     public LookUpCode[] lookUpCode;
 
+    [InitializeOnLoadMethod]
     void OnEnable()
     {
+        Debug.Log("Run DirectiveDefiner");
         string[] currentLines;
         List<string> newLines = new List<string>();
         List<string> linesToRemove = new List<string>();
         List<string> resultLines = new List<string>();
+
         #region What
         for (int i = 0; i < lookUpCode.Length; i++)
         {
@@ -26,13 +29,13 @@ public class DirectiveDefiner : ScriptableObject
             switch (lookUpCode[i].domainType)
             {
                 case DomainType.Class:
-                    if (CheckIfNamespaceExists(lookUpCode[i].ifExist))//Ex: "UnityStandardAssets.ImageEffects"
+                    if (CheckIfClassExists(lookUpCode[i].ifExist))//Ex: "UnityStandardAssets.ImageEffects"
                         newLines.Add(directiveToDefine);//Ex: "-define:STANDARD_IMAGE_EFFECTS_EXIST"
                     else
                         linesToRemove.Add(directiveToDefine);
                     break;
                 case DomainType.Namespace:
-                    if (CheckIfClassExists(lookUpCode[i].ifExist))//OVRManager
+                    if (CheckIfNamespaceExists(lookUpCode[i].ifExist))//OVRManager
                         newLines.Add(directiveToDefine);//-define:USING_OVR
                     else
                         linesToRemove.Add(directiveToDefine);
@@ -40,13 +43,20 @@ public class DirectiveDefiner : ScriptableObject
             }
         }
         #endregion
+
         string path = Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar + "Assets";
         if (!Directory.Exists(path))
         {
             Debug.Log("Something goes wrong and optimizer couldn't create the compiler defines needed. RTO should work but with limitations. Please report back to Yves \"Jack\" (AKA: RTO creator) so we can solve this issue");
             return;
         }
+
+#if NET_4_6
         path += "\\csc.rsp";
+#else
+        path += "\\mcs.rsp"; //.NET 3.5 (Deprecated)
+#endif
+
         if (!File.Exists(path))
         {
             resultLines.AddRange(newLines);
@@ -62,13 +72,19 @@ public class DirectiveDefiner : ScriptableObject
             foreach (string line in newLines)
             {
                 if (!resultLines.Contains(line))
+                {
+                    Debug.Log(line);
                     resultLines.Add(line);
+                }
             }
 
             foreach (string line in linesToRemove)
             {
                 if (!resultLines.Contains(line))
+                {
+                    Debug.Log(line);
                     resultLines.Remove(line);
+                }
             }
 
             if (resultLines.Count > 0)
