@@ -1,0 +1,15 @@
+{
+  "name": "com.ygamedev.pdm",
+  "version": "1.0.0",
+  "displayName": "PDM",
+  "unity": "2020.3",
+  "unityRelease": "18f1",
+  "description": "PDM by Yves J. Albuquerque",
+  "keywords": [ "unity" ],
+  "type": "library",
+  "hideInEditor": false,
+  "repository": {
+    "url": "git@github.com:YvesAlbuquerque/PDM_Core.git",
+    "type": "git"
+  }
+}
