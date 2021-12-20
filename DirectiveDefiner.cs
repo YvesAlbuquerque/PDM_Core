@@ -5,17 +5,20 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
-//[CreateAssetMenu(menuName = "Scriptable Objects/DirectiveDefiner")]
 [ExecuteInEditMode]
-[InitializeOnLoad]
 public class DirectiveDefiner : ScriptableObject
 {
     public LookUpCode[] lookUpCode;
 
+
     [InitializeOnLoadMethod]
+    static void Bootstrap()
+    {
+        Debug.Log("DirectiveDefiner Bootstrap");
+        UnityEditor.AssetDatabase.LoadAssetAtPath<DirectiveDefiner>("Assets/YJack/Scripts/Editor/PDM/PreprocessorDirectiveManager.asset");
+    }
     void OnEnable()
     {
-        Debug.Log("Run DirectiveDefiner");
         string[] currentLines;
         List<string> newLines = new List<string>();
         List<string> linesToRemove = new List<string>();
