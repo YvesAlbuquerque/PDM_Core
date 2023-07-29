@@ -3,19 +3,21 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.Compilation;
 using UnityEngine;
 
 [ExecuteInEditMode]
 public class DirectiveDefiner : ScriptableObject
 {
     public LookUpCode[] lookUpCode;
-
+    private bool needRecompile = false;
 
     [InitializeOnLoadMethod]
     static void Bootstrap()
     {
         Debug.Log("DirectiveDefiner Bootstrap");
-        UnityEditor.AssetDatabase.LoadAssetAtPath<DirectiveDefiner>("Assets/YJack/Scripts/Editor/PDM/PreprocessorDirectiveManager.asset");
+        var directiveDefiner = UnityEditor.AssetDatabase.LoadAssetAtPath<DirectiveDefiner>("Assets/YJack/Scripts/Editor/PDM/PreprocessorDirectiveManager.asset");
+        directiveDefiner.OnEnable();
     }
     void OnEnable()
     {
@@ -76,17 +78,19 @@ public class DirectiveDefiner : ScriptableObject
             {
                 if (!resultLines.Contains(line))
                 {
-                    Debug.Log(line);
+                    Debug.Log("define " + line);
                     resultLines.Add(line);
+                    needRecompile = true;
                 }
             }
 
             foreach (string line in linesToRemove)
             {
-                if (!resultLines.Contains(line))
+                if (resultLines.Contains(line))
                 {
-                    Debug.Log(line);
+                    Debug.Log("Undef " + line);
                     resultLines.Remove(line);
+                    needRecompile = true;
                 }
             }
 
@@ -97,6 +101,9 @@ public class DirectiveDefiner : ScriptableObject
                 Debug.Log("No Directives defined by PDM. Removing csc.rsp file.");
                 File.Delete(path);
             }
+
+            if (needRecompile)
+                CompilationPipeline.RequestScriptCompilation();
         }
     }
 
