@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sirenix.OdinInspector.Editor;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,8 +17,13 @@ public class DirectiveDefiner : ScriptableObject
     static void Bootstrap()
     {
         Debug.Log("DirectiveDefiner Bootstrap");
-        string path = AssetDatabase.FindAssets("t:DirectiveDefiner").First();
-        DirectiveDefiner directiveDefiner = UnityEditor.AssetDatabase.LoadAssetAtPath<DirectiveDefiner>(path);
+        string path = EditorPrefs.GetString("DirectiveDefiner", AssetDatabase.FindAssets("PreprocessorDirectiveManager").First());
+        DirectiveDefiner directiveDefiner = AssetDatabase.LoadAssetAtPath<DirectiveDefiner>(path);
+        if (directiveDefiner == null)
+            Debug.Log("DirectiveDefiner not found");
+        else
+            Debug.Log("DirectiveDefiner found at " + path);
+
         directiveDefiner.OnEnable();
         UnityEditor.PackageManager.Events.registeredPackages -= Events_registeredPackages;
         UnityEditor.PackageManager.Events.registeredPackages += Events_registeredPackages;
@@ -30,11 +36,14 @@ public class DirectiveDefiner : ScriptableObject
 
     void OnEnable()
     {
+        Debug.Log("Running DirectiveDefiner");
+
         string[] currentLines;
         List<string> newLines = new List<string>();
         List<string> linesToRemove = new List<string>();
         List<string> resultLines = new List<string>();
 
+        EditorPrefs.SetString("DirectiveDefiner", AssetDatabase.GetAssetPath(this));
         needRecompile = false;
 
         #region What
@@ -76,6 +85,7 @@ public class DirectiveDefiner : ScriptableObject
         if (!File.Exists(path))
         {
             resultLines.AddRange(newLines);
+            needRecompile = true;
 
             if (resultLines.Count > 0)
                 File.WriteAllLines(path, resultLines.ToArray());
@@ -112,10 +122,12 @@ public class DirectiveDefiner : ScriptableObject
                 Debug.Log("No Directives defined by PDM. Removing csc.rsp file.");
                 File.Delete(path);
             }
-
-            if (needRecompile)
-                CompilationPipeline.RequestScriptCompilation();
         }
+
+        if (needRecompile)
+            CompilationPipeline.RequestScriptCompilation();
+
+        Debug.Log("DirectiveDefiner Done");
     }
 
     static bool CheckIfNamespaceExists(string namespaceName)
