@@ -16,15 +16,26 @@ public class DirectiveDefiner : ScriptableObject
     static void Bootstrap()
     {
         Debug.Log("DirectiveDefiner Bootstrap");
-        var directiveDefiner = UnityEditor.AssetDatabase.LoadAssetAtPath<DirectiveDefiner>("Assets/YJack/Scripts/Editor/PDM/PreprocessorDirectiveManager.asset");
+        string path = AssetDatabase.FindAssets("t:DirectiveDefiner").First();
+        DirectiveDefiner directiveDefiner = UnityEditor.AssetDatabase.LoadAssetAtPath<DirectiveDefiner>(path);
         directiveDefiner.OnEnable();
+        UnityEditor.PackageManager.Events.registeredPackages -= Events_registeredPackages;
+        UnityEditor.PackageManager.Events.registeredPackages += Events_registeredPackages;
     }
+
+    private static void Events_registeredPackages(UnityEditor.PackageManager.PackageRegistrationEventArgs obj)
+    {
+        Bootstrap();
+    }
+
     void OnEnable()
     {
         string[] currentLines;
         List<string> newLines = new List<string>();
         List<string> linesToRemove = new List<string>();
         List<string> resultLines = new List<string>();
+
+        needRecompile = false;
 
         #region What
         for (int i = 0; i < lookUpCode.Length; i++)
