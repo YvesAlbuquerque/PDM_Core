@@ -1,5 +1,4 @@
-﻿using Sirenix.OdinInspector.Editor;
-using Sirenix.OdinInspector;
+﻿using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
 using System.IO;
