@@ -1,4 +1,5 @@
 ﻿using Sirenix.OdinInspector.Editor;
+using Sirenix.OdinInspector;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,7 +18,14 @@ public class DirectiveDefiner : ScriptableObject
     static void Bootstrap()
     {
         Debug.Log("DirectiveDefiner Bootstrap");
-        string path = EditorPrefs.GetString("DirectiveDefiner", AssetDatabase.FindAssets("PreprocessorDirectiveManager").First());
+        string[] preprocessorDirectiveManager = AssetDatabase.FindAssets("PreprocessorDirectiveManager");
+        if (preprocessorDirectiveManager.Length == 0)
+        {
+            Debug.Log("PreprocessorDirectiveManager not found");
+            return;
+        }
+        
+        string path = preprocessorDirectiveManager.First();
         DirectiveDefiner directiveDefiner = AssetDatabase.LoadAssetAtPath<DirectiveDefiner>(path);
         if (directiveDefiner == null)
             Debug.Log("DirectiveDefiner not found");
@@ -34,6 +42,7 @@ public class DirectiveDefiner : ScriptableObject
         Bootstrap();
     }
 
+    [Button("Apply")]
     void OnEnable()
     {
         Debug.Log("Running DirectiveDefiner");
