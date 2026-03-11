@@ -1,17 +1,17 @@
 {
   "name": "com.ygamedev.pdm",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "displayName": "PDM - Preprocessor Directive Manager",
-  "unity": "2020.3",
-  "unityRelease": "18f1",
-  "description": "Automatically defines C# preprocessor directives based on the presence of packages, namespaces, or classes in your Unity project. Manages csc.rsp compiler response files to enable conditional compilation for optional dependencies.",
+  "unity": "2021.3",
+  "description": "Automatically defines C# preprocessor directives based on the presence of packages, namespaces, or classes in your Unity project. Uses PlayerSettings scripting define symbols API with NamedBuildTarget for native integration with Unity's build system.",
   "keywords": [
     "unity",
     "preprocessor",
     "directives",
     "compiler",
     "editor",
-    "tools"
+    "tools",
+    "scripting-defines"
   ],
   "type": "library",
   "hideInEditor": false,

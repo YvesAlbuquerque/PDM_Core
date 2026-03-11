@@ -5,6 +5,22 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 
+## [1.2.0] - 2026-03-11
+
+### Changed
+- **Replaced `csc.rsp` file manipulation with `PlayerSettings.SetScriptingDefineSymbols`** using `NamedBuildTarget` API (Unity 2021.2+). Defines are now managed through Unity's native scripting define symbols system, making them visible in Project Settings and properly integrated with the build pipeline.
+- Bumped minimum Unity version to **2021.3 LTS** (required for `NamedBuildTarget` API)
+- Removed `System.IO` and `UnityEditor.Compilation` dependencies (no longer needed without `csc.rsp` file I/O)
+- Removed `needRecompile` field and manual `CompilationPipeline.RequestScriptCompilation()` calls — `PlayerSettings.SetScriptingDefineSymbols` triggers recompilation automatically
+
+### Added
+- **New `Package` DomainType** for direct UPM package detection via `PackageInfo.FindForAssetPath`. Use the package name (e.g., `com.unity.render-pipelines.universal`) as the lookup value for more reliable detection than namespace scanning.
+- Build target validation — warns if active build target group is unknown
+
+### Documentation
+- Updated README with Package DomainType documentation, migration notes, and updated requirements
+- Updated package.json description and keywords
+
 ## [1.1.0] - 2026-03-11
 
 ### Fixed

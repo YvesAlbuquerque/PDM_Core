@@ -3,16 +3,16 @@ using Sirenix.OdinInspector;
 #endif
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using UnityEditor;
-using UnityEditor.Compilation;
+using UnityEditor.Build;
 using UnityEngine;
 
 /// <summary>
 /// Preprocessor Directive Manager (PDM) - Automatically defines compiler preprocessor
-/// directives based on the presence of namespaces or classes in the project.
+/// directives based on the presence of namespaces, classes, or packages in the project.
+/// Uses Unity's PlayerSettings scripting define symbols API with NamedBuildTarget.
 /// </summary>
 [ExecuteInEditMode]
 public class DirectiveDefiner : ScriptableObject
@@ -20,10 +20,8 @@ public class DirectiveDefiner : ScriptableObject
     private const string LogPrefix = "[PDM] ";
     private const string AssetSearchName = "PreprocessorDirectiveDefiner";
     private const string EditorPrefsKey = "DirectiveDefiner";
-    private const string RspFileName = "csc.rsp";
 
     public LookUpCode[] lookUpCode;
-    private bool needRecompile = false;
 
     [InitializeOnLoadMethod]
     static void Bootstrap()
@@ -67,98 +65,76 @@ public class DirectiveDefiner : ScriptableObject
             return;
         }
 
-        List<string> newLines = new List<string>();
-        List<string> linesToRemove = new List<string>();
-        List<string> resultLines = new List<string>();
-
         EditorPrefs.SetString(EditorPrefsKey, AssetDatabase.GetAssetPath(this));
-        needRecompile = false;
+
+        List<string> definesToAdd = new List<string>();
+        List<string> definesToRemove = new List<string>();
 
         for (int i = 0; i < lookUpCode.Length; i++)
         {
-            string directiveToDefine = "-define:" + lookUpCode[i].define;
+            string define = lookUpCode[i].define;
+            bool exists = false;
 
             switch (lookUpCode[i].domainType)
             {
                 case DomainType.Class:
-                    if (CheckIfClassExists(lookUpCode[i].ifExist))
-                        newLines.Add(directiveToDefine);
-                    else
-                        linesToRemove.Add(directiveToDefine);
+                    exists = CheckIfClassExists(lookUpCode[i].ifExist);
                     break;
                 case DomainType.Namespace:
-                    if (CheckIfNamespaceExists(lookUpCode[i].ifExist))
-                        newLines.Add(directiveToDefine);
-                    else
-                        linesToRemove.Add(directiveToDefine);
+                    exists = CheckIfNamespaceExists(lookUpCode[i].ifExist);
+                    break;
+                case DomainType.Package:
+                    exists = CheckIfPackageExists(lookUpCode[i].ifExist);
                     break;
             }
-        }
 
-        string assetsPath = Path.Combine(Directory.GetCurrentDirectory(), "Assets");
-        if (!Directory.Exists(assetsPath))
-        {
-            Debug.LogError(LogPrefix + "Assets directory not found at: " + assetsPath +
-                ". Cannot write compiler response file.");
-            return;
+            if (exists)
+                definesToAdd.Add(define);
+            else
+                definesToRemove.Add(define);
         }
-
-        string rspPath = Path.Combine(assetsPath, RspFileName);
 
         try
         {
-            UpdateRspFile(rspPath, newLines, linesToRemove, resultLines);
+            UpdateScriptingDefineSymbols(definesToAdd, definesToRemove);
         }
-        catch (IOException ex)
+        catch (Exception ex)
         {
-            Debug.LogError(LogPrefix + "Failed to update " + RspFileName + ": " + ex.Message);
+            Debug.LogError(LogPrefix + "Failed to update scripting define symbols: " + ex.Message);
+        }
+    }
+
+    private static void UpdateScriptingDefineSymbols(List<string> definesToAdd, List<string> definesToRemove)
+    {
+        BuildTargetGroup group = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
+        if (group == BuildTargetGroup.Unknown)
+        {
+            Debug.LogWarning(LogPrefix + "Unknown build target group. Cannot update scripting defines.");
             return;
         }
 
-        if (needRecompile)
-            CompilationPipeline.RequestScriptCompilation();
-    }
+        NamedBuildTarget target = NamedBuildTarget.FromBuildTargetGroup(group);
+        string currentDefinesStr = PlayerSettings.GetScriptingDefineSymbols(target);
+        HashSet<string> defines = new HashSet<string>(
+            currentDefinesStr.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries));
 
-    private void UpdateRspFile(string rspPath, List<string> newLines, List<string> linesToRemove, List<string> resultLines)
-    {
-        if (!File.Exists(rspPath))
+        bool changed = false;
+
+        foreach (string define in definesToAdd)
         {
-            resultLines.AddRange(newLines);
-            needRecompile = newLines.Count > 0;
-
-            if (resultLines.Count > 0)
-                File.WriteAllLines(rspPath, resultLines.ToArray());
+            if (defines.Add(define))
+                changed = true;
         }
-        else
+
+        foreach (string define in definesToRemove)
         {
-            string[] currentLines = File.ReadAllLines(rspPath);
-            resultLines.AddRange(currentLines);
+            if (defines.Remove(define))
+                changed = true;
+        }
 
-            foreach (string line in newLines)
-            {
-                if (!resultLines.Contains(line))
-                {
-                    resultLines.Add(line);
-                    needRecompile = true;
-                }
-            }
-
-            foreach (string line in linesToRemove)
-            {
-                if (resultLines.Contains(line))
-                {
-                    resultLines.Remove(line);
-                    needRecompile = true;
-                }
-            }
-
-            if (resultLines.Count > 0)
-                File.WriteAllLines(rspPath, resultLines.ToArray());
-            else
-            {
-                Debug.Log(LogPrefix + "No directives defined. Removing " + RspFileName + ".");
-                File.Delete(rspPath);
-            }
+        if (changed)
+        {
+            PlayerSettings.SetScriptingDefineSymbols(target, string.Join(";", defines));
         }
     }
 
@@ -192,6 +168,20 @@ public class DirectiveDefiner : ScriptableObject
         }
     }
 
+    static bool CheckIfPackageExists(string packageName)
+    {
+        try
+        {
+            var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssetPath("Packages/" + packageName);
+            return packageInfo != null && packageInfo.name == packageName;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning(LogPrefix + "Error checking package '" + packageName + "': " + ex.Message);
+            return false;
+        }
+    }
+
     private static IEnumerable<Type> GetTypesSafe(Assembly assembly)
     {
         try
@@ -215,6 +205,7 @@ public class DirectiveDefiner : ScriptableObject
     public enum DomainType
     {
         Class,
-        Namespace
+        Namespace,
+        Package
     }
 }
