@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## [1.2.0] - 2026-03-11
 
 ### Changed
-- **Replaced `csc.rsp` file manipulation with `PlayerSettings.SetScriptingDefineSymbols`** using `NamedBuildTarget` API (Unity 2021.2+). Defines are now managed through Unity's native scripting define symbols system, making them visible in Project Settings and properly integrated with the build pipeline.
+- **Replaced `csc.rsp` file manipulation with `PlayerSettings.SetScriptingDefineSymbols`** using `NamedBuildTarget` API (Unity 2021.3+). Defines are now managed through Unity's native scripting define symbols system, making them visible in Project Settings and properly integrated with the build pipeline.
 - Bumped minimum Unity version to **2021.3 LTS** (required for `NamedBuildTarget` API)
 - Removed `System.IO` and `UnityEditor.Compilation` dependencies (no longer needed without `csc.rsp` file I/O)
 - Removed `needRecompile` field and manual `CompilationPipeline.RequestScriptCompilation()` calls — `PlayerSettings.SetScriptingDefineSymbols` triggers recompilation automatically

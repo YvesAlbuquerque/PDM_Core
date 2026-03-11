@@ -172,7 +172,8 @@ public class DirectiveDefiner : ScriptableObject
     {
         try
         {
-            var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssetPath("Packages/" + packageName);
+            string assetPath = "Packages/" + packageName + "/package.json";
+            var packageInfo = UnityEditor.PackageManager.PackageInfo.FindForAssetPath(assetPath);
             return packageInfo != null && packageInfo.name == packageName;
         }
         catch (Exception ex)

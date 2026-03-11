@@ -3,7 +3,7 @@
   "version": "1.2.0",
   "displayName": "PDM - Preprocessor Directive Manager",
   "unity": "2021.3",
-  "description": "Automatically defines C# preprocessor directives based on the presence of packages, namespaces, or classes in your Unity project. Uses PlayerSettings scripting define symbols API with NamedBuildTarget for native integration with Unity's build system.",
+  "description": "Automatically manages C# preprocessor directives based on package, namespace, or class presence. Native PlayerSettings integration via NamedBuildTarget.",
   "keywords": [
     "unity",
     "preprocessor",
