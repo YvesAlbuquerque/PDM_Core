@@ -1,15 +1,26 @@
 {
   "name": "com.ygamedev.pdm",
-  "version": "1.0.0",
-  "displayName": "PDM",
-  "unity": "2020.3",
-  "unityRelease": "18f1",
-  "description": "PDM by Yves J. Albuquerque",
-  "keywords": [ "unity" ],
+  "version": "1.2.0",
+  "displayName": "PDM - Preprocessor Directive Manager",
+  "unity": "2021.3",
+  "description": "Automatically manages C# preprocessor directives based on package, namespace, or class presence. Native PlayerSettings integration via NamedBuildTarget.",
+  "keywords": [
+    "unity",
+    "preprocessor",
+    "directives",
+    "compiler",
+    "editor",
+    "tools",
+    "scripting-defines"
+  ],
   "type": "library",
   "hideInEditor": false,
+  "author": {
+    "name": "Yves J. Albuquerque",
+    "url": "https://github.com/YvesAlbuquerque"
+  },
   "repository": {
-    "url": "git@github.com:YvesAlbuquerque/PDM_Core.git",
+    "url": "https://github.com/YvesAlbuquerque/PDM_Core.git",
     "type": "git"
   }
 }
