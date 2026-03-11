@@ -1,60 +1,79 @@
-﻿using Sirenix.OdinInspector;
+﻿#if ODIN_INSPECTOR
+using Sirenix.OdinInspector;
+#endif
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using UnityEditor;
 using UnityEditor.Compilation;
 using UnityEngine;
 
+/// <summary>
+/// Preprocessor Directive Manager (PDM) - Automatically defines compiler preprocessor
+/// directives based on the presence of namespaces or classes in the project.
+/// </summary>
 [ExecuteInEditMode]
 public class DirectiveDefiner : ScriptableObject
 {
+    private const string LogPrefix = "[PDM] ";
+    private const string AssetSearchName = "PreprocessorDirectiveDefiner";
+    private const string EditorPrefsKey = "DirectiveDefiner";
+    private const string RspFileName = "csc.rsp";
+
     public LookUpCode[] lookUpCode;
     private bool needRecompile = false;
 
     [InitializeOnLoadMethod]
     static void Bootstrap()
     {
-        Debug.Log("DirectiveDefiner Bootstrap");
-        string[] preprocessorDirectiveManager = AssetDatabase.FindAssets("PreprocessorDirectiveManager");
-        if (preprocessorDirectiveManager.Length == 0)
+        string[] guids = AssetDatabase.FindAssets(AssetSearchName);
+        if (guids.Length == 0)
         {
-            Debug.Log("PreprocessorDirectiveManager not found");
+            Debug.LogWarning(LogPrefix + "PreprocessorDirectiveDefiner asset not found. " +
+                "Please create a DirectiveDefiner ScriptableObject asset named 'PreprocessorDirectiveDefiner'.");
             return;
         }
-        
-        string path = preprocessorDirectiveManager.First();
-        DirectiveDefiner directiveDefiner = AssetDatabase.LoadAssetAtPath<DirectiveDefiner>(path);
-        if (directiveDefiner == null)
-            Debug.Log("DirectiveDefiner not found");
-        else
-            Debug.Log("DirectiveDefiner found at " + path);
 
-        directiveDefiner.OnEnable();
-        UnityEditor.PackageManager.Events.registeredPackages -= Events_registeredPackages;
-        UnityEditor.PackageManager.Events.registeredPackages += Events_registeredPackages;
+        string assetPath = AssetDatabase.GUIDToAssetPath(guids[0]);
+        DirectiveDefiner directiveDefiner = AssetDatabase.LoadAssetAtPath<DirectiveDefiner>(assetPath);
+        if (directiveDefiner == null)
+        {
+            Debug.LogWarning(LogPrefix + "Failed to load DirectiveDefiner asset at: " + assetPath);
+            return;
+        }
+
+        directiveDefiner.ApplyDirectives();
+
+        UnityEditor.PackageManager.Events.registeredPackages -= OnRegisteredPackages;
+        UnityEditor.PackageManager.Events.registeredPackages += OnRegisteredPackages;
     }
 
-    private static void Events_registeredPackages(UnityEditor.PackageManager.PackageRegistrationEventArgs obj)
+    private static void OnRegisteredPackages(UnityEditor.PackageManager.PackageRegistrationEventArgs obj)
     {
         Bootstrap();
     }
 
+#if ODIN_INSPECTOR
     [Button("Apply")]
-    void OnEnable()
+#endif
+    [ContextMenu("Apply Directives")]
+    public void ApplyDirectives()
     {
-        Debug.Log("Running DirectiveDefiner");
+        if (lookUpCode == null || lookUpCode.Length == 0)
+        {
+            Debug.LogWarning(LogPrefix + "No lookup entries configured. Nothing to do.");
+            return;
+        }
 
-        string[] currentLines;
         List<string> newLines = new List<string>();
         List<string> linesToRemove = new List<string>();
         List<string> resultLines = new List<string>();
 
-        EditorPrefs.SetString("DirectiveDefiner", AssetDatabase.GetAssetPath(this));
+        EditorPrefs.SetString(EditorPrefsKey, AssetDatabase.GetAssetPath(this));
         needRecompile = false;
 
-        #region What
         for (int i = 0; i < lookUpCode.Length; i++)
         {
             string directiveToDefine = "-define:" + lookUpCode[i].define;
@@ -62,52 +81,63 @@ public class DirectiveDefiner : ScriptableObject
             switch (lookUpCode[i].domainType)
             {
                 case DomainType.Class:
-                    if (CheckIfClassExists(lookUpCode[i].ifExist))//Ex: "UnityStandardAssets.ImageEffects"
-                        newLines.Add(directiveToDefine);//Ex: "-define:STANDARD_IMAGE_EFFECTS_EXIST"
+                    if (CheckIfClassExists(lookUpCode[i].ifExist))
+                        newLines.Add(directiveToDefine);
                     else
                         linesToRemove.Add(directiveToDefine);
                     break;
                 case DomainType.Namespace:
-                    if (CheckIfNamespaceExists(lookUpCode[i].ifExist))//OVRManager
-                        newLines.Add(directiveToDefine);//-define:USING_OVR
+                    if (CheckIfNamespaceExists(lookUpCode[i].ifExist))
+                        newLines.Add(directiveToDefine);
                     else
                         linesToRemove.Add(directiveToDefine);
                     break;
             }
         }
-        #endregion
 
-        string path = Directory.GetCurrentDirectory() + Path.DirectorySeparatorChar + "Assets";
-        if (!Directory.Exists(path))
+        string assetsPath = Path.Combine(Directory.GetCurrentDirectory(), "Assets");
+        if (!Directory.Exists(assetsPath))
         {
-            Debug.Log("Something goes wrong and optimizer couldn't create the compiler defines needed. RTO should work but with limitations. Please report back to Yves \"Jack\" (AKA: RTO creator) so we can solve this issue");
+            Debug.LogError(LogPrefix + "Assets directory not found at: " + assetsPath +
+                ". Cannot write compiler response file.");
             return;
         }
 
-#if NET_4_6
-        path += "\\csc.rsp";
-#else
-        path += "\\mcs.rsp"; //.NET 3.5 (Deprecated)
-#endif
+        string rspPath = Path.Combine(assetsPath, RspFileName);
 
-        if (!File.Exists(path))
+        try
+        {
+            UpdateRspFile(rspPath, newLines, linesToRemove, resultLines);
+        }
+        catch (IOException ex)
+        {
+            Debug.LogError(LogPrefix + "Failed to update " + RspFileName + ": " + ex.Message);
+            return;
+        }
+
+        if (needRecompile)
+            CompilationPipeline.RequestScriptCompilation();
+    }
+
+    private void UpdateRspFile(string rspPath, List<string> newLines, List<string> linesToRemove, List<string> resultLines)
+    {
+        if (!File.Exists(rspPath))
         {
             resultLines.AddRange(newLines);
-            needRecompile = true;
+            needRecompile = newLines.Count > 0;
 
             if (resultLines.Count > 0)
-                File.WriteAllLines(path, resultLines.ToArray());
+                File.WriteAllLines(rspPath, resultLines.ToArray());
         }
         else
         {
-            currentLines = File.ReadAllLines(path);
-            resultLines = currentLines.ToList();
+            string[] currentLines = File.ReadAllLines(rspPath);
+            resultLines.AddRange(currentLines);
 
             foreach (string line in newLines)
             {
                 if (!resultLines.Contains(line))
                 {
-                    Debug.Log("define " + line);
                     resultLines.Add(line);
                     needRecompile = true;
                 }
@@ -117,48 +147,61 @@ public class DirectiveDefiner : ScriptableObject
             {
                 if (resultLines.Contains(line))
                 {
-                    Debug.Log("Undef " + line);
                     resultLines.Remove(line);
                     needRecompile = true;
                 }
             }
 
             if (resultLines.Count > 0)
-                File.WriteAllLines(path, resultLines.ToArray());
+                File.WriteAllLines(rspPath, resultLines.ToArray());
             else
             {
-                Debug.Log("No Directives defined by PDM. Removing csc.rsp file.");
-                File.Delete(path);
+                Debug.Log(LogPrefix + "No directives defined. Removing " + RspFileName + ".");
+                File.Delete(rspPath);
             }
         }
-
-        if (needRecompile)
-            CompilationPipeline.RequestScriptCompilation();
-
-        Debug.Log("DirectiveDefiner Done");
     }
 
     static bool CheckIfNamespaceExists(string namespaceName)
     {
-        bool namespaceFound = (from assembly in AppDomain.CurrentDomain.GetAssemblies()
-                               from type in assembly.GetTypes()
-                               where type.Namespace == namespaceName
-                               select type).Any();
-
-        return namespaceFound;
+        try
+        {
+            return AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(GetTypesSafe)
+                .Any(type => type.Namespace == namespaceName);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning(LogPrefix + "Error checking namespace '" + namespaceName + "': " + ex.Message);
+            return false;
+        }
     }
 
     static bool CheckIfClassExists(string className)
     {
-        var myType = (from assembly in AppDomain.CurrentDomain.GetAssemblies()
-                      from type in assembly.GetTypes()
-                      where type.Name == className
-                      select type).FirstOrDefault();
-
-        if (myType == null)
+        try
+        {
+            return AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(GetTypesSafe)
+                .Any(type => type.Name == className);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning(LogPrefix + "Error checking class '" + className + "': " + ex.Message);
             return false;
-        else
-            return true;
+        }
+    }
+
+    private static IEnumerable<Type> GetTypesSafe(Assembly assembly)
+    {
+        try
+        {
+            return assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            return ex.Types.Where(t => t != null);
+        }
     }
 
     [Serializable]
