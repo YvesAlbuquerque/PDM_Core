@@ -1,6 +1,6 @@
 # PDM - Preprocessor Directive Manager
 
-PDM (Preprocessor Directive Manager) is a Unity Editor tool that automatically defines C# preprocessor directives based on the presence of packages, namespaces, or classes in your project. It is part of the [YJack framework](https://github.com/YvesAlbuquerque).
+PDM (Preprocessor Directive Manager) is a Unity Editor tool that automatically defines C# preprocessor directives based on the presence of packages, namespaces, or classes in your project. It is part of the Loomlight Flux repository's editor tooling.
 
 ## Overview
 
